@@ -1,5 +1,4 @@
 from datetime import date
-import datetime
 import re
 
 def to_date(date_str: str) -> date | None:
@@ -10,7 +9,7 @@ def to_date(date_str: str) -> date | None:
     except ValueError:
         return None
 
-def get_priority(p_str: str) -> str | None:
+def to_priority(p_str: str) -> str | None:
     if m := re.match('\(([A-Z])\)$', p_str):
         return m.group(1)
     return None
@@ -73,9 +72,30 @@ class Task:
         # x (A) 2020-05-20 2020-05-20 description +projectTag @contextTag key:value
         tokens = line.split(' ')
         
-        state = 'a'
+        state = 0
         for token in tokens:
-            if state == 'e':
+            if state != 4:
+                if state == 0 and token == 'x':
+                    task.completed = True
+                    state = 1
+                elif d := to_date(token):
+                    if state == 1:
+                        task.completion_date = d
+                        state = 3
+                    else:
+                        task.creation_date = d
+                        state = 'e'
+                        continue
+                elif state != 2:
+                    if p := to_priority(token):
+                        task.priority = p
+                        state = 2
+                    else:
+                        state = 4
+                else:
+                    state = 4
+
+            if state == 4:
                 if len(token) > 1 and token.startswith('+'):
                     task.project_tags.append(token[1:])
                 elif len(token) > 1 and token.startswith('@'):
@@ -84,27 +104,6 @@ class Task:
                     task.key_values[m.group(1)] = m.group(2)
 
                 task.description += token + ' '
-                continue
-
-            if state == 'a' and token == 'x':
-                task.completed = True
-                state = 'b'
-            elif d := to_date(token):
-                if state == 'b':
-                    task.completion_date = d
-                    state = 'd'
-                else:
-                    task.creation_date = d
-                    state = 'e'
-                    continue
-            elif state == 'a' or state == 'b' or state == 'd':
-                if p := get_priority(token):
-                    task.priority = p
-                    state = 'c'
-                else:
-                    state = 'e'
-            else:
-                state = 'e'
         
         task.description = task.description.strip()
         return task
@@ -161,6 +160,7 @@ if __name__ == '__main__':
     ]
     for l in lines:
         t = Task.parse(l)
+        print(str(t))
         assert not t.completed, 'Rule 4 #2. Task is complete'
 
     t = Task.parse('x 2011-03-02 2011-03-01 Review Tim\'s pull request'
