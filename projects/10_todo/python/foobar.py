@@ -75,57 +75,6 @@ class Task:
         
         state = 'a'
         for token in tokens:
-            if state == 'a':
-                if token == 'x':
-                    task.completed = True
-                    state = 'b'
-                elif d := to_date(token):
-                    task.creation_date = d
-                    state = 'e'
-                    continue
-                elif p := get_priority(token):
-                    task.priority = p
-                    state = 'c'
-                else:
-                    # description
-                    state = 'e'
-
-            elif state == 'b':
-                if d := to_date(token):
-                    task.completion_date = d
-                    state = 'd'
-                    continue
-                elif p := get_priority(token):
-                    task.priority = p
-                    state = 'c'
-                else:
-                    # description
-                    state = 'e'
-
-            elif state == 'c':
-                if d := to_date(token):
-                    task.creation_date = d
-                    state = 'e'
-                    continue
-                else:
-                    # description
-                    state = 'e'
-
-            elif state == 'd':
-                if d := to_date(token):
-                    task.completion_date = d
-                    state = 'e'
-                    continue
-                elif p := get_priority(token):
-                    task.priority = p
-                    state = 'c'
-                else:
-                    # description
-                    state = 'e'
-            
-            else:
-                state = 'e'
-            
             if state == 'e':
                 if len(token) > 1 and token.startswith('+'):
                     task.project_tags.append(token[1:])
@@ -135,6 +84,27 @@ class Task:
                     task.key_values[m.group(1)] = m.group(2)
 
                 task.description += token + ' '
+                continue
+
+            if state == 'a' and token == 'x':
+                task.completed = True
+                state = 'b'
+            elif d := to_date(token):
+                if state == 'b':
+                    task.completion_date = d
+                    state = 'd'
+                else:
+                    task.creation_date = d
+                    state = 'e'
+                    continue
+            elif state == 'a' or state == 'b' or state == 'd':
+                if p := get_priority(token):
+                    task.priority = p
+                    state = 'c'
+                else:
+                    state = 'e'
+            else:
+                state = 'e'
         
         task.description = task.description.strip()
         return task
@@ -197,5 +167,4 @@ if __name__ == '__main__':
         ' +TodoTxtTouch @github due:2016-05-30')
     print(str(t))
     print(repr(t))
-    print(repr(eval(repr(t))))
     print(t.key_values['due'])
