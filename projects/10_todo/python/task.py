@@ -84,7 +84,7 @@ class Task:
                         state = 3
                     else:
                         task.creation_date = d
-                        state = 'e'
+                        state = 4
                         continue
                 elif state != 2:
                     if p := to_priority(token):
